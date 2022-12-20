@@ -1,7 +1,7 @@
 /* global kakao */
 import React, {useEffect, useState ,useRef}  from "react";
-import  {MapMarker,Roadview,MapTypeId,Map} from "react-kakao-maps-sdk"
-
+import {CustomOverlayMap, Roadview, MapTypeId, Map, MapMarker} from "react-kakao-maps-sdk"
+import "./index.css"
 
 const KakaoMap = () => {
     const [isAtive, setIsAtive] = useState(false)
@@ -9,10 +9,23 @@ const KakaoMap = () => {
     const mapRef = useRef()
     const roadviewRef = useRef()
 
+    const [pan, setPan] = useState(0)
+
     const [center, setCenter] = useState({
         lat: 33.450422139819736,
         lng: 126.5709139924533,
     })
+
+    const getAngleClassName = (angle) => {
+        const threshold = 22.5 //이미지가 변화되어야 되는(각도가 변해야되는) 임계 값
+        for (var i = 0; i < 16; i++) {
+            //각도에 따라 변화되는 앵글 이미지의 수가 16개
+            if (angle > threshold * i && angle < threshold * (i + 1)) {
+                //각도(pan)에 따라 아이콘의 class명을 변경
+                return "m" + i
+            }
+        }
+    }
 
     useEffect(() => {
         const map = mapRef.current
@@ -39,7 +52,7 @@ const KakaoMap = () => {
                 {isAtive && (
                     <>
                         <MapTypeId type={kakao.maps.MapTypeId.ROADVIEW} />
-                        <MapMarker
+                        {/*<MapMarker
                             position={center}
                             draggable={true}
                             onDragEnd={(marker) => {
@@ -57,7 +70,16 @@ const KakaoMap = () => {
                                     offset: { x: 13, y: 46 },
                                 },
                             }}
-                        />
+                        />*/}
+                        <CustomOverlayMap
+                            position={center}
+                            yAnchor={1}
+                        >
+                            <div className={`MapWalker ${getAngleClassName(pan)}`}>
+                                <div className={`angleBack`}></div>
+                                <div className={"figure"}></div>
+                            </div>
+                        </CustomOverlayMap>
                     </>
                 )}
             </Map>
@@ -85,6 +107,8 @@ const KakaoMap = () => {
                         width: "100%",
                         height: "100vh",
                     }}
+                    pan={pan}
+                    onViewpointChange={(roadview) => setPan(roadview.getViewpoint().pan)}
                     onPositionChanged={(rv) => {
                         setCenter({
                             lat: rv.getPosition().getLat(),

@@ -20,6 +20,9 @@ code {
   width: 50%;
   height: 100vh;
 }
+
+
+
 .MapWalker {position:absolute;margin:-26px 0 0 -51px}
 .MapWalker .figure {position:absolute;width:25px;left:38px;top:-2px;
     height:39px;background:url(https://t1.daumcdn.net/localimg/localimages/07/2018/pc/roadview_minimap_wk_2018.png) -298px -114px no-repeat}
