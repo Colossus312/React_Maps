@@ -1,9 +1,15 @@
 /* global kakao */
-import React, {useEffect, useState ,useRef}  from "react";
-import {CustomOverlayMap, Roadview, MapTypeId, Map, MapMarker} from "react-kakao-maps-sdk"
+import React, {useEffect, useState ,useRef,useCallback}  from "react";
+import {CustomOverlayMap, Roadview, MapTypeId, Map } from "react-kakao-maps-sdk"
 import "./index.css"
 
 const KakaoMap = () => {
+    const startPoint = useRef({ x: 0, y: 0 })
+    const overlayPoint = useRef()
+    const [position, setPosition] = useState({
+        lat: 33.450422139819736,
+        lng: 126.5709139924533,
+    })
     const [isAtive, setIsAtive] = useState(false)
     const [isVisible, setIsVisible] = useState(false)
     const mapRef = useRef()
@@ -26,7 +32,64 @@ const KakaoMap = () => {
             }
         }
     }
+    const onMouseMove = useCallback(
+        (e) => {
+            // 이벤트 버블링 현상이 발생하지 않도록 방지 합니다.
+            e.preventDefault()
+            const map = mapRef.current
 
+            const proj = map.getProjection() // 지도 객체로 부터 화면픽셀좌표, 지도좌표간 변환을 위한 MapProjection 객체를 얻어옵니다
+            const deltaX = startPoint.current.x - e.clientX // mousedown한 픽셀좌표에서 mousemove한 좌표를 빼서 실제로 마우스가 이동된 픽셀좌표를 구합니다
+            const deltaY = startPoint.current.y - e.clientY
+            // mousedown됐을 때의 커스텀 오버레이의 좌표에 실제로 마우스가 이동된 픽셀좌표를 반영합니다
+            const newPoint = new kakao.maps.Point(
+                overlayPoint.current.x - deltaX,
+                overlayPoint.current.y - deltaY
+            )
+            // 계산된 픽셀 좌표를 지도 컨테이너에 해당하는 지도 좌표로 변경합니다
+            const newPos = proj.coordsFromContainerPoint(newPoint)
+
+            // 커스텀 오버레이의 좌표를 설정합니다
+            setPosition({
+                lat: newPos.getLat(),
+                lng: newPos.getLng(),
+            })
+        },
+        []
+    )
+
+    const onMouseUp = useCallback(() => {
+        // MouseUp 이벤트 발생시 기존 mousemove 이벤트를 제거 합니다.
+        document.removeEventListener("mousemove", onMouseMove)
+    }, [onMouseMove])
+
+    const onMouseDown = useCallback(
+        (e) => {
+            // 이벤트 버블링 현상이 발생하지 않도록 방지 합니다.
+            e.preventDefault()
+
+            const map = mapRef.current
+
+            const roadview = roadviewRef.current
+
+            const proj = map.getProjection()
+
+            kakao.maps.event.preventMap()
+
+            startPoint.current.x = e.clientX
+            startPoint.current.y = e.clientY
+
+            overlayPoint.current = proj.containerPointFromCoords(
+                new kakao.maps.LatLng(position.lat, position.lng)
+            )
+            setCenter({/////////////////////////
+                lat:position.lat,
+                lng:position.lng,
+            })
+            document.addEventListener("mousemove", onMouseMove)
+        },
+        [onMouseMove, position.lat, position.lng]
+    )
     useEffect(() => {
         const map = mapRef.current
         const roadview = roadviewRef.current
@@ -35,7 +98,12 @@ const KakaoMap = () => {
             map.relayout()
             map.setCenter(new kakao.maps.LatLng(center.lat, center.lng))
         }
-    }, [isVisible, center, isAtive])
+        document.addEventListener("mouseup", onMouseUp)
+
+        return () => {
+            document.removeEventListener("mouseup", onMouseUp)
+        }
+    }, [onMouseUp, onMouseDown, isVisible, center, isAtive])
     return (
         <div style={{ display: "flex", position: "relative", width: "100%", height: "100%" }}>
 
@@ -49,6 +117,7 @@ const KakaoMap = () => {
                 level={3}
                 ref={mapRef}
             >
+
                 {isAtive && (
                     <>
                         <MapTypeId type={kakao.maps.MapTypeId.ROADVIEW} />
@@ -72,14 +141,15 @@ const KakaoMap = () => {
                             }}
                         />*/}
                         <CustomOverlayMap
-                            position={center}
+                            position={position}
                             yAnchor={1}
                         >
-                            <div className={`MapWalker ${getAngleClassName(pan)}`}>
+                            <div onMouseDown={onMouseDown} className={`MapWalker ${getAngleClassName(pan)}`}>
                                 <div className={`angleBack`}></div>
                                 <div className={"figure"}></div>
                             </div>
                         </CustomOverlayMap>
+
                     </>
                 )}
             </Map>
@@ -111,6 +181,10 @@ const KakaoMap = () => {
                     onViewpointChange={(roadview) => setPan(roadview.getViewpoint().pan)}
                     onPositionChanged={(rv) => {
                         setCenter({
+                            lat: rv.getPosition().getLat(),
+                            lng: rv.getPosition().getLng(),
+                        })
+                        setPosition({
                             lat: rv.getPosition().getLat(),
                             lng: rv.getPosition().getLng(),
                         })

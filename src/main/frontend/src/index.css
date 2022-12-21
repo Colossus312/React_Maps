@@ -66,6 +66,12 @@ code {
 #close .img {display: block;background: url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/rv_close.png) no-repeat;width: 14px;height: 14px;}
 
 
+.overlay {
+  width: 100px;
+  height: 100px;
+  background: white;
+}
+
 .roadViewContainer {
   width: 100%;
   height: 100vh;
